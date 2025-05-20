@@ -1,20 +1,22 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 interface User {
   id: string;
   name: string;
   email: string;
-  picture: string;
+  avatar: string;
+  role: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (userInfo: User) => void;
-  logout: () => void;
+  login: (token: string) => Promise<void>;
+  logout: () => Promise<void>;
+  loadUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,24 +26,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Axios global config
+  axios.defaults.withCredentials = true;
+  axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+
+  // Load user on initial render
   useEffect(() => {
-    // Check if user data exists in localStorage
-    const storedUser = localStorage.getItem('taskManagerUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    const loadUserData = async () => {
+      try {
+        await loadUser();
+      } catch (error) {
+        console.error('Failed to load user:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserData();
   }, []);
 
-  const login = (userInfo: User) => {
-    setUser(userInfo);
-    localStorage.setItem('taskManagerUser', JSON.stringify(userInfo));
+  // Load user from backend
+  const loadUser = async () => {
+  try {
+    const response = await axios.get('/auth/me', {
+      withCredentials: true
+    });
+    setUser(response.data.data);
+  } catch (error) {
+    console.error('Failed to load user:', error);
+    setUser(null);
+  }
+};
+  // Login with Google token
+  const login = async (token: string) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.post('/auth/google', { token });
+      setUser(response.data.user);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('taskManagerUser');
-    navigate('/login');
+  // Logout user
+  const logout = async () => {
+    try {
+      await axios.get('/auth/logout');
+      setUser(null);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -51,7 +86,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
-        logout
+        logout,
+        loadUser
       }}
     >
       {children}
