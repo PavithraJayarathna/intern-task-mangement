@@ -15,8 +15,9 @@ const handleError = (res, statusCode, message) => {
 
 exports.googleAuth = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { credentials:token } = req.body;
     
+
     if (!token) {
       return handleError(res, 400, 'Google token is required');
     }
