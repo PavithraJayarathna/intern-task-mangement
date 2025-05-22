@@ -53,15 +53,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     setUser(response.data.data);
   } catch (error) {
+    if (axios.isAxiosError(error)) {
+    console.error('Failed to load user:', error.response?.status, error.response?.data);
+  } else {
     console.error('Failed to load user:', error);
-    setUser(null);
+  }
+  setUser(null);
   }
 };
   // Login with Google token
-  const login = async (token: string) => {
+  const login = async (credentials: string) => {
     setIsLoading(true);
     try {
-      const response = await axios.post('/auth/google', { token });
+      const response = await axios.post('/auth/google', { credentials });
       setUser(response.data.user);
     } finally {
       setIsLoading(false);
@@ -71,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Logout user
   const logout = async () => {
     try {
-      await axios.get('/auth/logout');
+      await axios.get('/auth/logout', { withCredentials: true });
       setUser(null);
       navigate('/login');
     } catch (error) {

@@ -17,55 +17,62 @@ const Login = () => {
 
   // 🔽 Place your useEffect here inside the Login component
   useEffect(() => {
-    window.handleGoogleAuth = async (response) => {
-      setIsGoogleLoading(true);
-      try {
-        if (!response.credential) throw new Error('No credential received from Google');
-        const decoded = jwtDecode(response.credential);
-        console.log('Google login/signup successful', decoded);
-        await login(response.credential);
-        toast.success('Login successful');
-      } catch (error) {
-        console.error('Google login error:', error);
-        toast.error('Login failed. Please try again.');
-      } finally {
-        setIsGoogleLoading(false);
-      }
-    };
+  window.handleGoogleAuth = async (response) => {
+    setIsGoogleLoading(true);
+    try {
+      console.log('JWT Token:', response.credential); 
+      const decoded = jwtDecode(response.credential);
+      console.log('Google login/signup successful', decoded);
+      await login(response.credential);
+      toast.success('Login successful');
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast.error('Login failed. Please try again.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
+  const renderGoogleButtons = () => {
     if (window.google && import.meta.env.VITE_GOOGLE_CLIENT_ID) {
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: window.handleGoogleAuth
       });
 
-      window.google.accounts.id.renderButton(
-        document.getElementById('googleSignInButton'),
-        {
+      const signInEl = document.getElementById('googleSignInButton');
+      const signUpEl = document.getElementById('googleSignUpButton');
+
+      if (signInEl) {
+        window.google.accounts.id.renderButton(signInEl, {
           type: 'standard',
           size: 'large',
           theme: 'outline',
           text: 'signin_with',
           shape: 'rectangular'
-        }
-      );
+        });
+      }
 
-      window.google.accounts.id.renderButton(
-        document.getElementById('googleSignUpButton'),
-        {
+      if (signUpEl) {
+        window.google.accounts.id.renderButton(signUpEl, {
           type: 'standard',
           size: 'large',
           theme: 'filled_blue',
           text: 'signup_with',
           shape: 'pill'
-        }
-      );
+        });
+      }
     }
+  };
 
-    return () => {
-      delete window.handleGoogleAuth;
-    };
-  }, [login]);
+  // Wait a tick before rendering buttons to ensure elements exist
+  setTimeout(renderGoogleButtons, 0);
+
+  return () => {
+    delete window.handleGoogleAuth;
+  };
+}, [login]);
+
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
